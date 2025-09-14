@@ -19,7 +19,7 @@ class ChatbotUI:
 
     def setup_ui(self):
         """Setup the main UI components"""
-        st.title("Study Department Chatbot")
+        # st.title("Study Department Chatbot")
         self.show_subject_list()
         self.show_chat_interface()
 

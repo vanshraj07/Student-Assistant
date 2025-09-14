@@ -24,6 +24,7 @@ client = MongoClient(MONGO_URI)
 db = client["student_assistant"]
 subjects_collection = db["subjects"]
 
+# ---------- DB Utility Functions ----------
 def add_subject_db(subject: str):
     subjects_collection.update_one({"name": subject}, {"$set": {"name": subject}}, upsert=True)
 
@@ -32,6 +33,21 @@ def delete_subject_db(subject: str):
 
 def list_subjects_db() -> List[str]:
     return [doc["name"] for doc in subjects_collection.find()]
+
+def add_topic_db(subject: str, topic: str):
+    subjects_collection.update_one(
+        {"name": subject},
+        {"$addToSet": {"topics": topic}},  # avoids duplicates
+        upsert=True
+    )
+
+def list_topics_db(subject: str) -> List[str]:
+    doc = subjects_collection.find_one({"name": subject})
+    return doc.get("topics", []) if doc else []
+
+def find_subject_by_topic_db(topic: str) -> str:
+    doc = subjects_collection.find_one({"topics": topic})
+    return doc["name"] if doc else None
 
 
 # ---------------------- Tools ----------------------
@@ -55,8 +71,37 @@ def list_subjects() -> str:
         return "📂 No subjects available."
     return "📚 Current subjects: " + ", ".join(subjects)
 
+@tool
+def add_topic(subject: str, topic: str) -> str:
+    """Adds a topic under a subject."""
+    add_topic_db(subject, topic)
+    return f"✅ Successfully added topic '{topic}' under '{subject}'."
 
-tools = [add_subject, delete_subject, list_subjects]
+@tool
+def list_topics(subject: str) -> str:
+    """Lists all topics under a subject."""
+    topics = list_topics_db(subject)
+    if not topics:
+        return f"📂 No topics found under '{subject}'."
+    return f"📚 Topics under {subject}: " + ", ".join(topics)
+
+@tool
+def find_subject_by_topic(topic: str) -> str:
+    """Finds which subject a topic belongs to."""
+    subject = find_subject_by_topic_db(topic)
+    if not subject:
+        return f"❌ Topic '{topic}' not found in any subject."
+    return f"📖 Topic '{topic}' belongs to subject '{subject}'."
+
+# All tools
+tools = [
+    add_subject,
+    delete_subject,
+    list_subjects,
+    add_topic,
+    list_topics,
+    find_subject_by_topic,
+]
 
 
 # ---------------------- Graph State ----------------------
@@ -88,11 +133,14 @@ def update_state_from_tool_calls(state: GraphState) -> GraphState:
         tool_name = tool_call.get("name")
         tool_args = tool_call.get("args", {})
         subject = tool_args.get("subject")
+        topic = tool_args.get("topic")
 
         if tool_name == "add_subject" and subject:
             add_subject_db(subject)
         elif tool_name == "delete_subject" and subject:
             delete_subject_db(subject)
+        elif tool_name == "add_topic" and subject and topic:
+            add_topic_db(subject, topic)
 
     current_subjects = list_subjects_db()
     return {**state, "subjects": current_subjects}
@@ -132,7 +180,16 @@ graph = workflow.compile()
 
 # ---------------------- Streamlit UI ----------------------
 st.set_page_config(page_title="Student Assistant", page_icon="🎓")
-st.title("🎓 Student Assistant")
+
+# Centered Title
+st.markdown(
+    """
+    <div style="text-align: center; padding-top: 100px;">
+        <h1 style="font-size: 3em;">🎓 Student Assistant</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Conversation state
 if "graph_state" not in st.session_state:
@@ -141,23 +198,20 @@ if "graph_state" not in st.session_state:
         "subjects": list_subjects_db()
     }
 
-# # Chat UI
-# user_input = st.chat_input("Type a command (e.g., 'Add Maths', 'Delete English', 'List subjects')")
-# if user_input:
-#     st.session_state.graph_state = graph.invoke(
-#         {"messages": [HumanMessage(content=user_input)], "subjects": st.session_state.graph_state["subjects"]}
-#     )
-
 # Show conversation
 for msg in st.session_state.graph_state["messages"]:
     role = "🧑 You" if msg.type == "human" else "🤖 Assistant"
     st.markdown(f"**{role}:** {msg.content}")
 
-# Show subjects
+# Show subjects + topics in sidebar
 st.sidebar.header("📚 Subjects in DB")
 subjects = list_subjects_db()
 if subjects:
     for sub in subjects:
-        st.sidebar.write(f"- {sub}")
+        topics = list_topics_db(sub)
+        if topics:
+            st.sidebar.write(f"- **{sub}** → {', '.join(topics)}")
+        else:
+            st.sidebar.write(f"- **{sub}** (no topics yet)")
 else:
     st.sidebar.write("No subjects available.")
