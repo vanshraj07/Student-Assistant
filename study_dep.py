@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 
 # ---------------------- Load Environment Variables ----------------------
-load_dotenv()  # Load .env file
+load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 
 if not MONGO_URI:
@@ -26,7 +26,9 @@ subjects_collection = db["subjects"]
 
 # ---------- DB Utility Functions ----------
 def add_subject_db(subject: str):
-    subjects_collection.update_one({"name": subject}, {"$set": {"name": subject}}, upsert=True)
+    subjects_collection.update_one(
+        {"name": subject}, {"$set": {"name": subject}}, upsert=True
+    )
 
 def delete_subject_db(subject: str):
     subjects_collection.delete_one({"name": subject})
@@ -38,16 +40,44 @@ def add_topic_db(subject: str, topic: str):
     subjects_collection.update_one(
         {"name": subject},
         {"$addToSet": {"topics": topic}},  # avoids duplicates
-        upsert=True
+        upsert=True,
     )
 
 def list_topics_db(subject: str) -> List[str]:
     doc = subjects_collection.find_one({"name": subject})
     return doc.get("topics", []) if doc else []
 
-def find_subject_by_topic_db(topic: str) -> str:
+def find_subject_by_topic_db(topic: str) -> str | None:
     doc = subjects_collection.find_one({"topics": topic})
     return doc["name"] if doc else None
+
+def add_topics_to_all_subjects_db(topics: List[str]):
+    subjects = list_subjects_db()
+    for subject in subjects:
+        for topic in topics:
+            subjects_collection.update_one(
+                {"name": subject},
+                {"$addToSet": {"topics": topic}},  # avoids duplicates
+                upsert=True,
+            )
+
+def delete_topic_from_all_subjects_db(topic: str):
+    subjects_collection.update_many(
+        {},  # all subjects
+        {"$pull": {"topics": topic}}  # remove if exists
+    )
+
+def delete_topic_from_subject_db(subject: str, topic: str):
+    subjects_collection.update_one(
+        {"name": subject},
+        {"$pull": {"topics": topic}}
+    )
+
+def delete_topic_from_multiple_subjects_db(subjects: List[str], topic: str):
+    subjects_collection.update_many(
+        {"name": {"$in": subjects}},
+        {"$pull": {"topics": topic}}
+    )
 
 
 # ---------------------- Tools ----------------------
@@ -93,6 +123,31 @@ def find_subject_by_topic(topic: str) -> str:
         return f"❌ Topic '{topic}' not found in any subject."
     return f"📖 Topic '{topic}' belongs to subject '{subject}'."
 
+@tool
+def add_topics_to_all_subjects(topics: List[str]) -> str:
+    """Adds multiple topics to all subjects."""
+    add_topics_to_all_subjects_db(topics)
+    return f"✅ Successfully added topics {', '.join(topics)} to all subjects."
+
+@tool
+def delete_topic_from_all_subjects(topic: str) -> str:
+    """Deletes a topic from all subjects."""
+    delete_topic_from_all_subjects_db(topic)
+    return f"🗑️ Successfully deleted topic '{topic}' from all subjects."
+
+@tool
+def delete_topic_from_subject(subject: str, topic: str) -> str:
+    """Deletes a topic from a specific subject."""
+    delete_topic_from_subject_db(subject, topic)
+    return f"🗑️ Successfully deleted topic '{topic}' from subject '{subject}'."
+
+@tool
+def delete_topic_from_multiple_subjects(subjects: List[str], topic: str) -> str:
+    """Deletes a topic from multiple specific subjects."""
+    delete_topic_from_multiple_subjects_db(subjects, topic)
+    return f"🗑️ Successfully deleted topic '{topic}' from subjects: {', '.join(subjects)}."
+
+
 # All tools
 tools = [
     add_subject,
@@ -101,6 +156,10 @@ tools = [
     add_topic,
     list_topics,
     find_subject_by_topic,
+    add_topics_to_all_subjects,
+    delete_topic_from_all_subjects,
+    delete_topic_from_subject,
+    delete_topic_from_multiple_subjects,  # ✅ new tool
 ]
 
 
@@ -126,14 +185,17 @@ tool_node = ToolNode(tools)
 def update_state_from_tool_calls(state: GraphState) -> GraphState:
     last_message = state["messages"][-1]
     tool_calls = getattr(last_message, "tool_calls", None) or last_message.additional_kwargs.get("tool_calls", [])
+
     if not tool_calls:
         return state
 
     for tool_call in tool_calls:
         tool_name = tool_call.get("name")
-        tool_args = tool_call.get("args", {})
+        tool_args = tool_call.get("args", {}) or {}
         subject = tool_args.get("subject")
+        subjects = tool_args.get("subjects")
         topic = tool_args.get("topic")
+        topics = tool_args.get("topics")
 
         if tool_name == "add_subject" and subject:
             add_subject_db(subject)
@@ -141,6 +203,14 @@ def update_state_from_tool_calls(state: GraphState) -> GraphState:
             delete_subject_db(subject)
         elif tool_name == "add_topic" and subject and topic:
             add_topic_db(subject, topic)
+        elif tool_name == "add_topics_to_all_subjects" and topics:
+            add_topics_to_all_subjects_db(topics)
+        elif tool_name == "delete_topic_from_all_subjects" and topic:
+            delete_topic_from_all_subjects_db(topic)
+        elif tool_name == "delete_topic_from_subject" and subject and topic:
+            delete_topic_from_subject_db(subject, topic)
+        elif tool_name == "delete_topic_from_multiple_subjects" and subjects and topic:
+            delete_topic_from_multiple_subjects_db(subjects, topic)
 
     current_subjects = list_subjects_db()
     return {**state, "subjects": current_subjects}
@@ -150,10 +220,7 @@ def update_state_from_tool_calls(state: GraphState) -> GraphState:
 def should_continue(state: GraphState):
     last_message = state["messages"][-1]
     tool_calls = getattr(last_message, "tool_calls", None) or last_message.additional_kwargs.get("tool_calls", [])
-    if tool_calls:
-        return "continue_to_tools"
-    else:
-        return "end_conversation"
+    return "continue_to_tools" if tool_calls else "end_conversation"
 
 
 # ---------------------- Workflow ----------------------
@@ -188,14 +255,14 @@ st.markdown(
         <h1 style="font-size: 3em;">🎓 Student Assistant</h1>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 # Conversation state
 if "graph_state" not in st.session_state:
     st.session_state.graph_state = {
         "messages": [],
-        "subjects": list_subjects_db()
+        "subjects": list_subjects_db(),
     }
 
 # Show conversation
