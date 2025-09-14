@@ -1,35 +1,73 @@
+import streamlit as st
 import os
-from typing import TypedDict, Annotated, List
+from typing import List, TypedDict, Annotated
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage
+from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
+from langgraph.graph.message import add_messages
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
 
+# ---------------------- Load Environment Variables ----------------------
+load_dotenv()  # Load .env file
+MONGO_URI = os.getenv("MONGO_URI")
+
+if not MONGO_URI:
+    st.error("❌ MONGO_URI is not set in .env file")
+    st.stop()
+
+# ---------------------- MongoDB Setup ----------------------
+client = MongoClient(MONGO_URI)
+db = client["student_assistant"]
+subjects_collection = db["subjects"]
+
+def add_subject_db(subject: str):
+    subjects_collection.update_one({"name": subject}, {"$set": {"name": subject}}, upsert=True)
+
+def delete_subject_db(subject: str):
+    subjects_collection.delete_one({"name": subject})
+
+def list_subjects_db() -> List[str]:
+    return [doc["name"] for doc in subjects_collection.find()]
+
+
+# ---------------------- Tools ----------------------
 @tool
 def add_subject(subject: str) -> str:
     """Adds a subject to the list of subjects."""
-    return f"Successfully added '{subject}'. The user should be notified of this success."
-
+    add_subject_db(subject)
+    return f"✅ Successfully added '{subject}'."
 
 @tool
 def delete_subject(subject: str) -> str:
     """Deletes a subject from the list of subjects."""
-    return f"Successfully deleted '{subject}'. The user should be notified of this success."
+    delete_subject_db(subject)
+    return f"🗑️ Successfully deleted '{subject}'."
 
-tools = [add_subject, delete_subject]
+@tool
+def list_subjects() -> str:
+    """Lists all subjects."""
+    subjects = list_subjects_db()
+    if not subjects:
+        return "📂 No subjects available."
+    return "📚 Current subjects: " + ", ".join(subjects)
 
 
+tools = [add_subject, delete_subject, list_subjects]
+
+
+# ---------------------- Graph State ----------------------
 class GraphState(TypedDict):
-    messages: Annotated[List[BaseMessage], lambda x, y: x + y]
+    messages: Annotated[List[BaseMessage], add_messages]
     subjects: List[str]
 
 
-
+# ---------------------- Model ----------------------
 def call_model(state: GraphState):
-    print("---AGENT---")
-    messages = state['messages']
+    messages = state["messages"]
     model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
     model_with_tools = model.bind_tools(tools)
     response = model_with_tools.invoke(messages)
@@ -39,71 +77,87 @@ def call_model(state: GraphState):
 tool_node = ToolNode(tools)
 
 
-
+# ---------------------- Update State ----------------------
 def update_state_from_tool_calls(state: GraphState) -> GraphState:
-    print("---UPDATING SUBJECTS LIST---")
-    last_message = state['messages'][-1]
-    
-    if not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
+    last_message = state["messages"][-1]
+    tool_calls = getattr(last_message, "tool_calls", None) or last_message.additional_kwargs.get("tool_calls", [])
+    if not tool_calls:
         return state
 
-    current_subjects = state.get('subjects', [])
-    
-    for tool_call in last_message.tool_calls:
-        tool_name = tool_call.get('name')
-        tool_args = tool_call.get('args', {})
-        subject = tool_args.get('subject')
-        
-        if not subject:
-            continue
+    for tool_call in tool_calls:
+        tool_name = tool_call.get("name")
+        tool_args = tool_call.get("args", {})
+        subject = tool_args.get("subject")
 
-        if tool_name == 'add_subject':
-            if subject not in current_subjects:
-                print(f"Adding '{subject}' to the list.")
-                current_subjects.append(subject)
-        elif tool_name == 'delete_subject':
-            if subject in current_subjects:
-                print(f"Deleting '{subject}' from the list.")
-                current_subjects.remove(subject)
+        if tool_name == "add_subject" and subject:
+            add_subject_db(subject)
+        elif tool_name == "delete_subject" and subject:
+            delete_subject_db(subject)
 
-    
-    return {"subjects": current_subjects}
+    current_subjects = list_subjects_db()
+    return {**state, "subjects": current_subjects}
 
 
-
+# ---------------------- Control Flow ----------------------
 def should_continue(state: GraphState):
-    last_message = state['messages'][-1]
-    if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+    last_message = state["messages"][-1]
+    tool_calls = getattr(last_message, "tool_calls", None) or last_message.additional_kwargs.get("tool_calls", [])
+    if tool_calls:
         return "continue_to_tools"
     else:
         return "end_conversation"
 
 
+# ---------------------- Workflow ----------------------
 workflow = StateGraph(GraphState)
-
-# Add the nodes
 workflow.add_node("agent", call_model)
 workflow.add_node("update_state", update_state_from_tool_calls)
 workflow.add_node("tools", tool_node)
 
-# Set the entry point
 workflow.set_entry_point("agent")
 
-# Add the conditional edge
 workflow.add_conditional_edges(
     "agent",
     should_continue,
     {
-        "continue_to_tools": "update_state", 
+        "continue_to_tools": "update_state",
         "end_conversation": END,
     },
 )
 
-
 workflow.add_edge("update_state", "tools")
-workflow.add_edge("tools", "agent") 
-
-
+workflow.add_edge("tools", "agent")
 graph = workflow.compile()
 
-print("Graph compiled! You can now interact with it.")
+
+# ---------------------- Streamlit UI ----------------------
+st.set_page_config(page_title="Student Assistant", page_icon="🎓")
+st.title("🎓 Student Assistant")
+
+# Conversation state
+if "graph_state" not in st.session_state:
+    st.session_state.graph_state = {
+        "messages": [],
+        "subjects": list_subjects_db()
+    }
+
+# # Chat UI
+# user_input = st.chat_input("Type a command (e.g., 'Add Maths', 'Delete English', 'List subjects')")
+# if user_input:
+#     st.session_state.graph_state = graph.invoke(
+#         {"messages": [HumanMessage(content=user_input)], "subjects": st.session_state.graph_state["subjects"]}
+#     )
+
+# Show conversation
+for msg in st.session_state.graph_state["messages"]:
+    role = "🧑 You" if msg.type == "human" else "🤖 Assistant"
+    st.markdown(f"**{role}:** {msg.content}")
+
+# Show subjects
+st.sidebar.header("📚 Subjects in DB")
+subjects = list_subjects_db()
+if subjects:
+    for sub in subjects:
+        st.sidebar.write(f"- {sub}")
+else:
+    st.sidebar.write("No subjects available.")
