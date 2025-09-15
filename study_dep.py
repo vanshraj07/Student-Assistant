@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from typing import List, TypedDict, Annotated
+from typing import List, TypedDict, Annotated, Optional, Any
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_core.tools import tool
@@ -9,6 +9,9 @@ from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import add_messages
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
+from langchain_openai import ChatOpenAI
+import pandas as pd
 
 
 # ---------------------- Load Environment Variables ----------------------
@@ -165,8 +168,9 @@ tools = [
 
 # ---------------------- Graph State ----------------------
 class GraphState(TypedDict):
-    messages: Annotated[List[BaseMessage], add_messages]
+    messages: Annotated[list, add_messages]
     subjects: List[str]
+    file_data: Optional[Any]  # Can be a pandas DataFrame or string from a PDF
 
 
 # ---------------------- Model ----------------------
@@ -282,3 +286,18 @@ if subjects:
             st.sidebar.write(f"- **{sub}** (no topics yet)")
 else:
     st.sidebar.write("No subjects available.")
+
+def create_dataframe_tool(state: GraphState):
+    """A tool that can answer questions about a pandas DataFrame."""
+    df = state.get('file_data')
+    if not isinstance(df, pd.DataFrame):
+        return "No CSV data available to query."
+    
+    # You might need to adjust the LLM based on your setup
+    llm = ChatOpenAI(model="gpt-4-turbo", temperature=0) 
+    agent_executor = create_pandas_dataframe_agent(llm, df, verbose=True)
+    
+    # This is a simplified example. You would wrap this logic in a @tool
+    # and handle the agent's invocation based on user input.
+    # The tool would take a user's natural language query as input.
+    pass
