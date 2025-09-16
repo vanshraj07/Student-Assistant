@@ -110,7 +110,6 @@ Then open your browser at 👉 http://localhost:8501
 
 ---
 
-
 ## 📅 Planned Enhancements
 
 -📊 DataFrame Query Tool → Ask natural language questions over uploaded CSVs.
@@ -124,3 +123,5 @@ Then open your browser at 👉 http://localhost:8501
 -📱 PWA Support → Use as a mobile-friendly app with offline caching.
 
 -📈 Analytics Dashboard → Track study progress & chatbot usage stats.
+
+---
