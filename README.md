@@ -70,4 +70,54 @@ student-assistant/
 ```bash
 GOOGLE_API_KEY=your_gemini_key
 MONGO_URI=your_mongodb_uri
+```
 
+🧪 Setup Instructions
+
+Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/student-assistant.git
+cd student-assistant
+```
+
+
+
+Set up Virtual Environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # (Linux/Mac)
+.venv\Scripts\activate      # (Windows)
+```
+
+
+Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+
+Run Streamlit App
+
+```bash
+streamlit run app.py
+```
+
+
+Then open your browser at 👉 http://localhost:8501
+
+📅 Planned Enhancements
+
+📊 DataFrame Query Tool → Ask natural language questions over uploaded CSVs.
+
+🧠 AI-Generated Study Plans → Automatically generate revision schedules from subjects & topics.
+
+🌐 Multilingual Support → Chat in Hindi/other Indian languages.
+
+🗣️ Voice Interaction → Speech-to-text input + TTS responses.
+
+📱 PWA Support → Use as a mobile-friendly app with offline caching.
+
+📈 Analytics Dashboard → Track study progress & chatbot usage stats.
