@@ -72,7 +72,7 @@ GOOGLE_API_KEY=your_gemini_key
 MONGO_URI=your_mongodb_uri
 ```
 
-🧪 Setup Instructions
+## 🧪 Setup Instructions
 
 Clone the Repository
 
