@@ -115,7 +115,7 @@ Then open your browser at 👉 http://localhost:8501
 - 📊 **DataFrame Query Tool** → Ask natural language questions over uploaded CSVs.  
 - 🧠 **AI-Generated Study Plans** → Automatically generate revision schedules from subjects & topics.  
 - 🌐 **Multilingual Support** → Chat in Hindi/other Indian languages.  
-- 🗣️ **Voice Interaction** → Speech-to-text input + TTS responses.  
+- 🗣️ **Voice Interaction** → Add support for voice-based question input and text-to-speech (TTS) responses.  
 - 📱 **PWA Support** → Use as a mobile-friendly app with offline caching.  
 - 📈 **Analytics Dashboard** → Track study progress & chatbot usage stats.  
 
