@@ -50,4 +50,24 @@ It integrates a **chatbot interface**, **MongoDB persistence**, and **file-based
 ---
 
 ## 🧩 Project Structure
+student-assistant/
+│── study_dep.py # Core Graph & Tool setup
+│── app.py # Streamlit chatbot UI
+│── requirements.txt # Dependencies
+│── .env # API keys & Mongo URI
+│── README.md # Documentation
+
+
+---
+
+## 🔌 API Keys & Configuration
+
+### 🔐 Required Keys:
+- **Google Generative AI API Key** (for LLM responses)  
+- **MongoDB URI** (for subject/topic persistence)  
+
+### 📁 Add `.env` file:
+```bash
+GOOGLE_API_KEY=your_gemini_key
+MONGO_URI=your_mongodb_uri
 
