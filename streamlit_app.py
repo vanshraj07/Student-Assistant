@@ -23,6 +23,7 @@ class ChatbotUI:
 
     def setup_ui(self):
         """Setup the main UI components"""
+        st.header("💬 Chat with Your Assistant")
         with st.sidebar:
             st.header("Controls")
             self.show_file_uploader()
@@ -127,20 +128,39 @@ class ChatbotUI:
                 st.write(content)
 
 def main():
+    """Main function to run the Streamlit app"""
     st.set_page_config(
         page_title="Study Department Chatbot",
         page_icon="📚",
         layout="wide"
     )
-    st.markdown(
-    """
-    <div style="text-align: center; padding-top: 50px;">
-        <h1 style="font-size: 3em;">📚 Study Department Chatbot</h1>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
     
+    # Custom CSS for better styling
+    st.markdown("""
+        <style>
+        .main-header {
+            text-align: center;
+            padding: 2rem 0;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(
+        """
+        <div class="main-header">
+            <h1 style="font-size: 3em;">📚 Study Department Chatbot</h1>
+            <p style="font-size: 1.2em; color: #666;">Manage subjects, topics, and files with AI assistance</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    # Initialize the chatbot UI
     ChatbotUI()
 
 if __name__ == "__main__":
