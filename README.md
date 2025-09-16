@@ -108,7 +108,10 @@ streamlit run app.py
 
 Then open your browser at 👉 http://localhost:8501
 
-📅 Planned Enhancements
+---
+
+
+##📅 Planned Enhancements
 
 📊 DataFrame Query Tool → Ask natural language questions over uploaded CSVs.
 
