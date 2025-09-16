@@ -1,1 +1,1 @@
-# StudentAssistant
+# 🎓 Student Assistant
