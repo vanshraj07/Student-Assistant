@@ -1,5 +1,5 @@
 # 🎓 Student Assistant
-An AI-powered academic assistant web app designed to help students manage **subjects, topics, and study materials**.  
+An AI-powered academic assistant web app designed to help students to manage **subjects, topics, and study realted queries**.  
 It integrates a **chatbot interface**, **MongoDB persistence**, and **file-based context (CSV/PDF)** to enhance learning.  
 
 ---
@@ -12,11 +12,17 @@ It integrates a **chatbot interface**, **MongoDB persistence**, and **file-based
 - Integrates tools for:
   - Adding/Deleting subjects
   - Adding/Listing/Deleting topics
+  - Marking topics complete / incomplete
   - Finding which subject a topic belongs to
   - Bulk topic operations (all/multiple subjects)
 
 ### 📚 Subject & Topic Management
 - Persistent storage in **MongoDB**.
+- Completion tracking with ✅ / ❌ per topic.
+- Sidebar shows:
+- Overall progress bar
+- Subject-wise breakdown
+- Quick stats (incomplete topics left)
 - Supports **subject creation, deletion, and listing**.
 - Allows **adding/removing topics** under specific or multiple subjects.
 
