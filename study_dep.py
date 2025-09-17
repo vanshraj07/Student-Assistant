@@ -40,9 +40,10 @@ def list_subjects_db() -> List[str]:
     return [doc["name"] for doc in subjects_collection.find()]
 
 def add_topic_db(subject: str, topic: str):
+    """Always store topic as a string"""
     subjects_collection.update_one(
         {"name": subject},
-        {"$addToSet": {"topics": topic}},  # avoids duplicates
+        {"$addToSet": {"topics": str(topic)}},  # enforce string
         upsert=True,
     )
 
@@ -60,26 +61,26 @@ def add_topics_to_all_subjects_db(topics: List[str]):
         for topic in topics:
             subjects_collection.update_one(
                 {"name": subject},
-                {"$addToSet": {"topics": topic}},  # avoids duplicates
+                {"$addToSet": {"topics": str(topic)}},  # enforce string
                 upsert=True,
             )
 
 def delete_topic_from_all_subjects_db(topic: str):
     subjects_collection.update_many(
         {},  # all subjects
-        {"$pull": {"topics": topic}}  # remove if exists
+        {"$pull": {"topics": str(topic)}}
     )
 
 def delete_topic_from_subject_db(subject: str, topic: str):
     subjects_collection.update_one(
         {"name": subject},
-        {"$pull": {"topics": topic}}
+        {"$pull": {"topics": str(topic)}}
     )
 
 def delete_topic_from_multiple_subjects_db(subjects: List[str], topic: str):
     subjects_collection.update_many(
         {"name": {"$in": subjects}},
-        {"$pull": {"topics": topic}}
+        {"$pull": {"topics": str(topic)}}
     )
 
 
@@ -116,7 +117,7 @@ def list_topics(subject: str) -> str:
     topics = list_topics_db(subject)
     if not topics:
         return f"📂 No topics found under '{subject}'."
-    return f"📚 Topics under {subject}: " + ", ".join(topics)
+    return f"📚 Topics under {subject}: " + ", ".join(map(str, topics))
 
 @tool
 def find_subject_by_topic(topic: str) -> str:
@@ -130,7 +131,7 @@ def find_subject_by_topic(topic: str) -> str:
 def add_topics_to_all_subjects(topics: List[str]) -> str:
     """Adds multiple topics to all subjects."""
     add_topics_to_all_subjects_db(topics)
-    return f"✅ Successfully added topics {', '.join(topics)} to all subjects."
+    return f"✅ Successfully added topics {', '.join(map(str, topics))} to all subjects."
 
 @tool
 def delete_topic_from_all_subjects(topic: str) -> str:
@@ -271,8 +272,10 @@ subjects = list_subjects_db()
 if subjects:
     for sub in subjects:
         topics = list_topics_db(sub)
-        if topics:
-            st.sidebar.write(f"- **{sub}** → {', '.join(topics)}")
+        # ✅ Convert everything to strings safely
+        topics_str = [t if isinstance(t, str) else str(t.get("topic", t)) for t in topics]
+        if topics_str:
+            st.sidebar.write(f"- **{sub}** → {', '.join(topics_str)}")
         else:
             st.sidebar.write(f"- **{sub}** (no topics yet)")
 else:
@@ -284,11 +287,8 @@ def create_dataframe_tool(state: GraphState):
     if not isinstance(df, pd.DataFrame):
         return "No CSV data available to query."
     
-    # You might need to adjust the LLM based on your setup
     llm = ChatOpenAI(model="gpt-4-turbo", temperature=0) 
     agent_executor = create_pandas_dataframe_agent(llm, df, verbose=True)
     
-    # This is a simplified example. You would wrap this logic in a @tool
-    # and handle the agent's invocation based on user input.
-    # The tool would take a user's natural language query as input.
+    # Placeholder for integration
     pass
