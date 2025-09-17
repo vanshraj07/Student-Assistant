@@ -4,3 +4,7 @@ beside/
 
 _pycache_/
 .langgraph_api/
+
+token.json
+credentials.json
+.venv/

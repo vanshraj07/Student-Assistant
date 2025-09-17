@@ -1,3 +1,6 @@
+google-api-python-client 
+google-auth-httplib2 
+google-auth-oauthlib
 langgraph
 langgraph-prebuilt
 langgraph-sdk
@@ -25,4 +28,6 @@ python-dateutil
 Flask 
 requests 
 flask-cors
+typing_extensions
+streamlit 
 pymongo[srv]
