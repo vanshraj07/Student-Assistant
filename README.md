@@ -16,7 +16,7 @@ It integrates a **chatbot interface**, **MongoDB persistence**, and **file-based
   - Finding which subject a topic belongs to
   - Bulk topic operations (all/multiple subjects)
 
-![Alt Text]("assets/Chatbot UI.png")
+![Alt Text]("./assets/Chatbot UI.png")
 
 ---
 
@@ -74,8 +74,9 @@ student-assistant/
 
 The Student Assistant is powered by LangGraph, which controls how the chatbot interacts with user queries, database operations, and actions.
 
-![Alt Text]("assets/LangGraph Flow Diagram.png")
+![Alt Text]("./assets/LangGraph Flow Diagram.png")
 
+---
 
 ## 🔌 API Keys & Configuration
 
