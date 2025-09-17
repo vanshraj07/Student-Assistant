@@ -77,6 +77,12 @@ student-assistant/
 The Student Assistant is powered by LangGraph, which controls how the chatbot interacts with user queries, database operations, and actions.
 
 <p align="center">
+  <img src="assets/LangGraph_Flow_Diagram.png" alt="LangGraph Flow Diagram" width="600">
+</p>
+
+---
+
+<p align="center">
   <img src="assets/System_Architecture.png" alt="System Architecture" width="600">
 </p>
 
