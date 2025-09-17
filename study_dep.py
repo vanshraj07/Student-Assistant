@@ -140,10 +140,15 @@ def add_topics_to_all_subjects_db(topics: List[str]):
             )
 
 def delete_topic_from_all_subjects_db(topic: str):
-    # Delete from both old and new format
+    # Case 1: plain string
     subjects_collection.update_many(
         {},
-        {"$pull": {"topics": {"$or": [topic, {"name": topic}]}}}
+        {"$pull": {"topics": topic}}
+    )
+    # Case 2: dict format
+    subjects_collection.update_many(
+        {},
+        {"$pull": {"topics": {"name": topic}}}
     )
 
 def delete_topic_from_subject_db(subject: str, topic: str):

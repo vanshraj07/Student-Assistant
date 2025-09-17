@@ -1,7 +1,6 @@
 {
   "dockerfile_lines": [],
   "graphs": {
-    "study": "./study_dep.py:graph",
     "calendar": "./CalendarAgent.py:app"
   },
   "env": "./.env",
