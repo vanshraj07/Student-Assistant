@@ -68,7 +68,7 @@ student-assistant/
 
 ## 🔌 API Keys & Configuration
 
-### 🔐 Required Keys:
+### 🔐 API Keys:
 - **Google Generative AI API Key** (for LLM responses)  
 - **MongoDB URI** (for subject/topic persistence)  
 
